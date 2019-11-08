@@ -15,9 +15,9 @@ const server = express();
 server.use(cors());
 server.get('/location', locationHandler);
 server.get('/weather', weatherHandler);
+server.get('/movies', movieHandler);
 server.get('/trails', trailsHandler);
 server.get('/coordinates', coordHandler);
-// server.get('/add', addRow);
 server.use('*', notFound);
 server.use(errorHandler);
 ///////////////////////////////////////////////////////////////////////
@@ -51,16 +51,12 @@ function locationHandler(req, res) {
     let ABC = 'SELECT latitude FROM coordinates WHERE latitude = ($1)'
     let dataValue = [data.body.results[0].geometry.location.lat]
     client.query(ABC, dataValue).then(result => {
-      console.log("ROWWWWS", result);
-      // console.log(result.rows[0].latitude);
       if (!result.rowCount) {
-        console.log('no match found');
         let SQL = 'INSERT INTO coordinates (latitude, longitude) VALUES ($1, $2) RETURNING *';
         let safeValues = [data.body.results[0].geometry.location.lat, data.body.results[0].geometry.location.lng];
         client.query(SQL, safeValues);
         res.status(200).send(location)
       } else {
-        console.log('match found');
         res.status(200).send(location);
       }
     })
@@ -98,6 +94,18 @@ function trailsHandler(req, res) {
     res.status(200).json(trailData);
   }).catch(error => errorHandler(error, req, res));
 }
+
+///////////////////////////////////////////////////////////////////////
+//Build a path to Movies
+function movieHandler(req, res) {
+  const url = `https://api.themoviedb.org/3/search/movies?query=${req.query.data.latitude},${req.query.data.longitude}&api_key=${process.env.MOVIES_API_KEY}&language=en-US&page=1`
+  superagent.get(url).then(data => {
+    let movieData = data.body.movies.map(value => {
+      return new Movies(value);
+    });
+    res.status(200).json(movieData);
+  }).catch(error => errorHandler(error, req, res));
+}
 ///////////////////////////////////////////////////////////////////////
 //Constructor Functions
 ///////////////////////////////////////////////////////////////////////
@@ -130,6 +138,18 @@ function Trail(trailData) {
   this.conditions = `${trailData.conditionStatus}, ${trailData.conditionDetails}`
   this.condition_date = trailData.conditionDate.slice(0, 9);
   this.condition_time = trailData.conditionDate.slice(11, 18);
+}
+
+///////////////////////////////////////////////////////////////////////
+//Trail Constructor
+function Movies(movies) {
+  this.title = movies.title;
+  this.overview = movies.overview;
+  this.average_votes = movies.vote_average;
+  this.total_votes = movies.vote_count;
+  this.image_url = `https://image.tmdb.org/t/p/w500/${movies.poster_path}`;
+  this.popularity = movies.popularity;
+  this.released_on = movies.release_date;
 }
 // server.listen(PORT, () => {
 //   console.log(`listening on PORT ${PORT}`);

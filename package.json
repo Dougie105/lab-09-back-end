@@ -20,6 +20,7 @@
   "homepage": "https://github.com/Dougie105/lab-07-back-end#readme",
   "dependencies": {
     "cors": "^2.8.5",
+    "db": "^1.1.1",
     "dotenv": "^8.2.0",
     "express": "^4.17.1",
     "gitignore": "^0.6.0",
