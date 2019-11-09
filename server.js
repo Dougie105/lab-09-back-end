@@ -16,6 +16,7 @@ server.use(cors());
 server.get('/location', locationHandler);
 server.get('/weather', weatherHandler);
 server.get('/movies', movieHandler);
+server.get('/yelp', yelpHandler);
 server.get('/trails', trailsHandler);
 server.get('/coordinates', coordHandler);
 server.use('*', notFound);
@@ -98,13 +99,34 @@ function trailsHandler(req, res) {
 ///////////////////////////////////////////////////////////////////////
 //Build a path to Movies
 function movieHandler(req, res) {
-  const url = `https://api.themoviedb.org/3/search/movies?query=${req.query.data.latitude},${req.query.data.longitude}&api_key=${process.env.MOVIES_API_KEY}&language=en-US&page=1`
+
+  const url = `https://api.themoviedb.org/3/search/movie?api_key=${process.env.MOVIES_API_KEY}&language=en-US&query=${req.query.data.search_query}&page=1&include_adult=false`
+
   superagent.get(url).then(data => {
-    let movieData = data.body.movies.map(value => {
+    let movieData = data.body.results.map(value => {
       return new Movies(value);
     });
     res.status(200).json(movieData);
   }).catch(error => errorHandler(error, req, res));
+}
+
+///////////////////////////////////////////////////////////////////////
+//Build a path to Yelp
+function yelpHandler(request, response) {
+
+  const url = `https://api.yelp.com/v3/businesses/search?latitude=${request.query.data.latitude}&longitude=${request.query.data.longitude}`
+
+  superagent.get(url)
+  .set('Authorization', `Bearer ${process.env.YELP_API_KEY}`)
+  .then(data => {
+    const yelpData = data.body.businesses.map(business => {
+      return new Yelp(business);
+    })
+    response.status(200).json(yelpData);
+  })
+  .catch( () => {
+    errorHandler('So sorry monseiour im was a bad kitty...', request, response)
+  });
 }
 ///////////////////////////////////////////////////////////////////////
 //Constructor Functions
@@ -141,7 +163,7 @@ function Trail(trailData) {
 }
 
 ///////////////////////////////////////////////////////////////////////
-//Trail Constructor
+//MOVIE Constructor
 function Movies(movies) {
   this.title = movies.title;
   this.overview = movies.overview;
@@ -151,6 +173,18 @@ function Movies(movies) {
   this.popularity = movies.popularity;
   this.released_on = movies.release_date;
 }
+
+///////////////////////////////////////////////////////////////////////
+//Yelp Constructor
+
+function Yelp(restaurant) {
+  this.name = restaurant.name;
+  this.image_url = restaurant.image_url;
+  this.price = restaurant.price;
+  this.rating = restaurant.rating;
+  this.url = restaurant.url;
+}
+
 // server.listen(PORT, () => {
 //   console.log(`listening on PORT ${PORT}`);
 // });
